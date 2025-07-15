@@ -1,0 +1,8 @@
+zenml[server]~=0.84.0
+scikit-learn~=1.7.0
+lightgbm~=4.6.0
+polars~=1.31.0
+
+notebook
+ipython
+ruff~=0.12.3
