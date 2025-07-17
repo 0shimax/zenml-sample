@@ -13,7 +13,7 @@ def split_data_into_features_and_targets(
     Annotated[pl.DataFrame, "features"],
     Annotated[pl.DataFrame, "targets"],
 ]:
-    features = dataset.drop(parameters["target_colmn"])
+    features = dataset.select(pl.col(parameters["features"]))
     targets = dataset.select(pl.col(parameters["target_colmn"]))
     return features, targets
 

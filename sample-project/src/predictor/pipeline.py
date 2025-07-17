@@ -1,45 +1,25 @@
-from zenml import get_pipeline_context, pipeline
+from zenml import pipeline
+from zenml.client import Client
 from zenml.logger import get_logger
 
-from .steps import (
-    data_loader,
-    inference_predict,
-    inference_preprocessor,
-)
+from .steps.predictor import predict
 
 logger = get_logger(__name__)
+client = Client()
 
 
 @pipeline
-def inference(random_state: int, target: str):
+def inference():
     """
     Model inference pipeline.
-
-    This is a pipeline that loads the inference data, processes it with
-    the same preprocessing pipeline used in training, and runs inference
-    with the trained model.
-
-    Args:
-        random_state: Random state for reproducibility.
-        target: Name of target column in dataset.
     """
     # Get the production model artifact
-    model = get_pipeline_context().model.get_artifact("sklearn_classifier")
+    # model = get_pipeline_context().model.get_artifact("lgbm_regressor_eval")
+    # model = client.get_model_version(model_name_or_id="lgbm_regressor_eval")
+    model = client.get_artifact_version(name_id_or_prefix="lgbm_regressor_eval")
+    test_features = client.get_artifact_version(name_id_or_prefix="test_features")
 
-    # Get the preprocess pipeline artifact associated with this version
-    preprocess_pipeline = get_pipeline_context().model.get_artifact(
-        "preprocess_pipeline"
-    )
-
-    # Link all the steps together by calling them and passing the output
-    #  of one step as the input of the next step.
-    df_inference = data_loader(random_state=random_state, is_inference=True)
-    df_inference = inference_preprocessor(
-        dataset_inf=df_inference,
-        preprocess_pipeline=preprocess_pipeline,
-        target=target,
-    )
-    inference_predict(
-        model=model,
-        dataset_inf=df_inference,
+    predict(
+        model,
+        test_features,
     )

@@ -8,6 +8,8 @@ from zenml.logger import get_logger
 logger = get_logger(__name__)
 
 
+# ) -> zenml.steps.Output(var_name=pl.DataFrame, var_name2=np.ndarray)
+# とかにすればpythonオブジェクトして出力される
 @step
 def load_companies(
     steps_parameters: dict,

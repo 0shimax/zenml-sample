@@ -1,50 +1,22 @@
-from typing import Optional
-from uuid import UUID
-
 from zenml import pipeline
 from zenml.client import Client
 from zenml.logger import get_logger
 
-from .steps import model_evaluator, model_promoter, model_trainer
+from .steps.trainer import train_model
 
 logger = get_logger(__name__)
+client = Client()
 
 
 @pipeline
-def training(
-    train_dataset_id: Optional[UUID] = None,
-    test_dataset_id: Optional[UUID] = None,
-    target: Optional[str] = "target",
-    model_type: Optional[str] = "sgd",
-):
-    """
-    Model training pipeline.
+def training():
+    """Model training pipeline."""
+    features = client.get_artifact_version(name_id_or_prefix="features")
+    targets = client.get_artifact_version(name_id_or_prefix="targets")
+    _ = train_model.with_options(substitutions={"model_suffix": ""})(features, targets)
 
-    This is a pipeline that loads the data from a preprocessing pipeline,
-    trains a model on it and evaluates the model. If it is the first model
-    to be trained, it will be promoted to production. If not, it will be
-    promoted only if it has a higher accuracy than the current production
-    model version.
-
-    Args:
-        train_dataset_id: ID of the train dataset produced by feature engineering.
-        test_dataset_id: ID of the test dataset produced by feature engineering.
-        target: Name of target column in dataset.
-        model_type: The type of model to train.
-    """
-    # Link all the steps together by calling them and passing the output
-    # of one step as the input of the next step.
-    client = Client()
-    dataset_trn = client.get_artifact_version(name_id_or_prefix=train_dataset_id)
-    dataset_tst = client.get_artifact_version(name_id_or_prefix=test_dataset_id)
-
-    model = model_trainer(dataset_trn=dataset_trn, target=target, model_type=model_type)
-
-    acc = model_evaluator(
-        model=model,
-        dataset_trn=dataset_trn,
-        dataset_tst=dataset_tst,
-        target=target,
+    features = client.get_artifact_version(name_id_or_prefix="train_features")
+    targets = client.get_artifact_version(name_id_or_prefix="train_targets")
+    _ = train_model.with_options(substitutions={"model_suffix": "_eval"})(
+        features, targets
     )
-
-    model_promoter(accuracy=acc)
