@@ -11,6 +11,6 @@ def read_yaml_file(filename) -> dict:
             raise RuntimeError from exc
 
 
-def load_parameters(root_dir: str = "./config") -> dict:
-    files = pathlib(root_dir).glob("*.yaml")
+def load_parameters(root_dir: str = "./configs") -> dict:
+    files = pathlib.Path(root_dir).glob("*.yml")
     return {file.stem: read_yaml_file(file) for file in files}

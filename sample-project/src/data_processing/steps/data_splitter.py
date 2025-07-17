@@ -7,37 +7,32 @@ from zenml import step
 
 
 @step
-def data_splitter(
-    dataset: pl.DataFrame, test_size: float = 0.2
+def split_data_into_features_and_targets(
+    dataset: pl.DataFrame, parameters: dict
 ) -> Tuple[
-    Annotated[pl.DataFrame, "raw_dataset_trn"],
-    Annotated[pl.DataFrame, "raw_dataset_tst"],
+    Annotated[pl.DataFrame, "features"],
+    Annotated[pl.DataFrame, "targets"],
 ]:
-    """Dataset splitter step.
+    features = dataset.drop(parameters["target_colmn"])
+    targets = dataset.select(pl.col(parameters["target_colmn"]))
+    return features, targets
 
-    This is an example of a dataset splitter step that splits the data
-    into train and test set before passing it to ML model.
 
-    This step is parameterized, which allows you to configure the step
-    independently of the step code, before running it in a pipeline.
-    In this example, the step can be configured to use different test
-    set sizes. See the documentation for more information:
-
-        https://docs.zenml.io/how-to/build-pipelines/use-pipeline-step-parameters
-
-    Args:
-        dataset: Dataset read from source.
-        test_size: 0.0..1.0 defining portion of test set.
-
-    Returns:
-        The split dataset: dataset_trn, dataset_tst.
-    """
-    dataset_trn, dataset_tst = train_test_split(
-        dataset,
-        test_size=test_size,
-        random_state=42,
-        shuffle=True,
+@step
+def split_data_for_train_and_test(
+    features: pl.DataFrame, targets: pl.DataFrame, parameters: dict
+) -> Tuple[
+    Annotated[pl.DataFrame, "train_features"],
+    Annotated[pl.DataFrame, "test_features"],
+    Annotated[pl.DataFrame, "train_targets"],
+    Annotated[pl.DataFrame, "test_targets"],
+]:
+    """Dataset splitter step."""
+    train_features, test_features, train_targets, test_targets = train_test_split(
+        features,
+        targets,
+        test_size=parameters["test_size"],
+        random_state=parameters["random_state"],
+        shuffle=parameters["shuffle"],
     )
-    dataset_trn = pl.DataFrame(dataset_trn, columns=dataset.columns)
-    dataset_tst = pl.DataFrame(dataset_tst, columns=dataset.columns)
-    return dataset_trn, dataset_tst
+    return train_features, test_features, train_targets, test_targets

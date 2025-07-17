@@ -1,0 +1,32 @@
+# settings:
+#   docker:
+#     required_integrations:
+#       - sklearn
+#       - pandas
+#     requirements:
+#       - pyarrow
+
+data_loader:
+  companies:
+    data_path: 01_raw/companies.csv
+  reviews:
+    data_path: 01_raw/reviews.csv
+  shuttles:
+    data_path: 01_raw/shuttles.xlsx
+
+data_splitter:
+  features_and_targets:
+    features:
+      - engines
+      - passenger_capacity
+      - crew
+      - bool_d_check_complete
+      - bool_moon_clearance_complete
+      - bool_iata_approved
+      - cleaned_company_rating
+      - review_scores_rating  
+    target_colmn: float_price
+  train_and_test:
+    test_size: 0.35
+    random_state: 555
+    shuffle: true  

@@ -1,5 +1,6 @@
+import pathlib
+
 import polars as pl
-from sklearn.datasets import load_breast_cancer
 from typing_extensions import Annotated
 from zenml import step
 from zenml.logger import get_logger
@@ -8,38 +9,42 @@ logger = get_logger(__name__)
 
 
 @step
-def data_loader(
-    random_state: int, is_inference: bool = False, target: str = "target"
+def load_companies(
+    steps_parameters: dict,
+    global_parameters: dict,
 ) -> Annotated[pl.DataFrame, "dataset"]:
-    """Dataset reader step.
+    """Dataset reader step."""
+    data_path = pathlib.Path(global_parameters["data_root"]) / pathlib.Path(
+        steps_parameters["data_path"]
+    )
+    dataset = pl.read_csv(data_path)
+    logger.info(f"Dataset with {len(dataset)} records loaded!")
+    return dataset
 
-    This is an example of a dataset reader step that load Breast Cancer dataset.
 
-    This step is parameterized, which allows you to configure the step
-    independently of the step code, before running it in a pipeline.
-    In this example, the step can be configured with number of rows and logic
-    to drop target column or not. See the documentation for more information:
+@step
+def load_reviews(
+    steps_parameters: dict,
+    global_parameters: dict,
+) -> Annotated[pl.DataFrame, "dataset"]:
+    """Dataset reader step."""
+    data_path = pathlib.Path(global_parameters["data_root"]) / pathlib.Path(
+        steps_parameters["data_path"]
+    )
+    dataset = pl.read_csv(data_path)
+    logger.info(f"Dataset with {len(dataset)} records loaded!")
+    return dataset
 
-        https://docs.zenml.io/how-to/build-pipelines/use-pipeline-step-parameters
 
-    Args:
-        random_state: Random state for sampling
-        is_inference: If `True` subset will be returned and target column
-            will be removed from dataset.
-        target: Name of target columns in dataset.
-
-    Returns:
-        The dataset artifact as Pandas DataFrame and name of target column.
-    """
-    dataset = load_breast_cancer(as_frame=True)
-    inference_size = int(len(dataset.target) * 0.05)
-    dataset: pl.DataFrame = dataset.frame
-    inference_subset = dataset.sample(inference_size, random_state=random_state)
-    if is_inference:
-        dataset = inference_subset
-        dataset.drop(columns=target, inplace=True)
-    else:
-        dataset.drop(inference_subset.index, inplace=True)
-    dataset.reset_index(drop=True, inplace=True)
+@step
+def load_shuttles(
+    steps_parameters: dict,
+    global_parameters: dict,
+) -> Annotated[pl.DataFrame, "dataset"]:
+    """Dataset reader step."""
+    data_path = pathlib.Path(global_parameters["data_root"]) / pathlib.Path(
+        steps_parameters["data_path"]
+    )
+    dataset = pl.read_excel(data_path)
     logger.info(f"Dataset with {len(dataset)} records loaded!")
     return dataset

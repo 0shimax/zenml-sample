@@ -1,73 +1,67 @@
-from typing import List, Optional, Tuple
-
 import polars as pl
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
 from typing_extensions import Annotated
-from utils.preprocess import ColumnsDropper, DataFrameCaster, NADropper
-from zenml import log_metadata, step
+from zenml import step
+
+# def _is_true(x: pl.Series) -> pl.Series:
+#     return x == "t"
+
+
+# def _parse_percentage(x: pl.Series) -> pl.Series:
+#     x = x.str.replace("%", "")
+#     x = x.astype(float) / 100
+#     return x
+
+
+# def _parse_money(x: pl.Series) -> pl.Series:
+#     x = x.str.replace("$", "").str.replace(",", "")
+#     x = x.astype(float)
+#     return x
 
 
 @step
-def data_preprocessor(
-    random_state: int,
-    dataset_trn: pl.DataFrame,
-    dataset_tst: pl.DataFrame,
-    drop_na: Optional[bool] = None,
-    normalize: Optional[bool] = None,
-    drop_columns: Optional[List[str]] = None,
-    target: Optional[str] = "target",
-) -> Tuple[
-    Annotated[pl.DataFrame, "dataset_trn"],
-    Annotated[pl.DataFrame, "dataset_tst"],
-    Annotated[Pipeline, "preprocess_pipeline"],
-]:
-    """Data preprocessor step.
-
-    This is an example of a data processor step that prepares the data so that
-    it is suitable for model training. It takes in a dataset as an input step
-    artifact and performs any necessary preprocessing steps like cleaning,
-    feature engineering, feature selection, etc. It then returns the processed
-    dataset as a step output artifact.
-
-    This step is parameterized, which allows you to configure the step
-    independently of the step code, before running it in a pipeline.
-    In this example, the step can be configured to drop NA values, drop some
-    columns and normalize numerical columns. See the documentation for more
-    information:
-
-        https://docs.zenml.io/how-to/build-pipelines/use-pipeline-step-parameters
+def preprocess_companies(
+    companies: pl.DataFrame,
+) -> Annotated[pl.DataFrame, "preprocessed_companies"]:
+    """Preprocesses the data for companies.
 
     Args:
-        random_state: Random state for sampling.
-        dataset_trn: The train dataset.
-        dataset_tst: The test dataset.
-        drop_na: If `True` all NA rows will be dropped.
-        normalize: If `True` all numeric fields will be normalized.
-        drop_columns: List of column names to drop.
-        target: Name of target column in dataset.
-
+        companies: Raw data.
     Returns:
-        The processed datasets (dataset_trn, dataset_tst) and fitted `Pipeline` object.
+        Preprocessed data, with `company_rating` converted to a float and
+        `iata_approved` converted to boolean.
     """
-    # We use the sklearn pipeline to chain together multiple preprocessing steps
-    preprocess_pipeline = Pipeline([("passthrough", "passthrough")])
-    if drop_na:
-        preprocess_pipeline.steps.append(("drop_na", NADropper()))
-    if drop_columns:
-        # Drop columns
-        preprocess_pipeline.steps.append(("drop_columns", ColumnsDropper(drop_columns)))
-    if normalize:
-        # Normalize the data
-        preprocess_pipeline.steps.append(("normalize", MinMaxScaler()))
-    preprocess_pipeline.steps.append(("cast", DataFrameCaster(dataset_trn.columns)))
-    dataset_trn = preprocess_pipeline.fit_transform(dataset_trn)
-    dataset_tst = preprocess_pipeline.transform(dataset_tst)
-
-    # Log metadata so we can load it in the inference pipeline
-    log_metadata(
-        metadata={"random_state": random_state, "target": target},
-        artifact_name="preprocess_pipeline",
-        infer_artifact=True,
+    companies_ch_iata_approved = companies.with_columns(
+        bool_iata_approved=(pl.col("iata_approved") == "t")
     )
-    return dataset_trn, dataset_tst, preprocess_pipeline
+    companies_ch_company_rating = companies_ch_iata_approved.with_columns(
+        cleaned_company_rating=(
+            pl.col("company_rating").str.replace("%", "").cast(pl.Float64) / 100
+        )
+    )
+    return companies_ch_company_rating
+
+
+@step
+def preprocess_shuttles(
+    shuttles: pl.DataFrame,
+) -> Annotated[pl.DataFrame, "preprocessed_shuttles"]:
+    """Preprocesses the data for shuttles.
+
+    Args:
+        shuttles: Raw data.
+    Returns:
+        Preprocessed data, with `price` converted to a float and `d_check_complete`,
+        `moon_clearance_complete` converted to boolean.
+    """
+    shuttles_ch_d_check_complete = shuttles.with_columns(
+        bool_d_check_complete=(pl.col("d_check_complete") == "t")
+    )
+    shuttles_ch_moon_clearance_complete = shuttles_ch_d_check_complete.with_columns(
+        bool_moon_clearance_complete=(pl.col("moon_clearance_complete") == "t")
+    )
+    shuttles_ch_price = shuttles_ch_moon_clearance_complete.with_columns(
+        float_price=(
+            pl.col("price").str.replace("\$", "").str.replace(",", "").cast(pl.Float64)
+        )
+    )
+    return shuttles_ch_price
